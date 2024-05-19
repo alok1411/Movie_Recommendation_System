@@ -1,0 +1,130 @@
+*********************************Backend*************************************
+
+
+
+1 : import pandas as pd
+
+2 : movies=pd.read_csv('tmdb_5000_movies.csv')
+
+3 : movies.head(3)
+
+4 : credits=pd.read_csv('tmdb_5000_credits.csv')
+
+5 : credits.head(2)
+
+6 : movies.shape
+
+7 : credits.shape
+
+8 : movies=movies.merge(credits, on='title')
+
+9 : movies.head()
+
+10 : movies=movies[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
+
+11 : movies.head()
+
+12 : import ast
+
+13 : def convert(text):
+         L = []
+         for i in ast.literal_eval(text):
+             L.append(i['name'])
+         return L
+
+14 : movies.dropna(inplace=True)
+
+15 : movies['genres'] = movies['genres'].apply(convert)
+
+16 : movies.head(3)
+
+17 : movies['keywords'] = movies['keywords'].apply(convert)
+
+18 : movies.head()
+
+19 : import ast
+
+20 : ast.literal_eval('[{"id": 28, "name": "Action"}, {"id": 12, "name":"Adventure"}, {"id": 14, "name": "Fantasy"}, {"id": 900, "name":"Science Fiction"}]')
+
+21 : def convert3(text):
+         L = []
+         counter = 0
+         for i in ast.literal_eval(text):
+             if counter < 3:
+                 L.append(i['name'])
+             counter+=1
+         return L
+
+22 : movies['cast'] =  movies['cast'].apply(convert)
+
+23 : movies.head(8)
+
+24 : movies['cast'] = movies['cast'].apply(lambda x:x[0:3])
+
+25 : def fetch_director(text):
+         L = []
+         for i in ast.literal_eval(text):
+             if i['job'] == 'Director':
+                 L.append(i['name'])
+         return L
+
+26 : movies['crew'] = movies['crew'].apply(fetch_director)
+
+27 : movies['overview'] = movies['overview'].apply(lambda x:x.split())
+
+28 : movies.sample(5)
+
+29 : def collapse(L):
+         L1 = []
+         for i in L:
+             L1.append(i.replace(" ",""))
+         return L1
+
+30 :  movies['cast'] = movies['cast'].apply(collapse)
+      movies['crew'] = movies['crew'].apply(collapse)
+      movies['genres'] = movies['genres'].apply(collapse)
+      movies['keywords'] = movies['keywords'].apply(collapse)
+	  
+31 : movies.head(15)
+
+32 : movies['overview'] = movies['overview'].apply(lambda x:x.split())
+
+33 : movies.head()
+
+34 : movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
+
+35 : new = movies.drop(columns=['overview','genres','keywords','cast','crew'])
+
+36 : new.head()
+
+37 : new['tags'] = new['tags'].apply(lambda x: " ".join(x))
+
+38 : new.head()
+
+39 : from sklearn.feature_extraction.text import CountVectorizer
+     cv = CountVectorizer(max_features=5000, stop_words= 'english')
+	 
+40 : vector = cv.fit_transform(new['tags']).toarray()
+
+41 : vector.shape
+
+42 : from sklearn.metrics.pairwise import cosine_similarity
+
+43 : similarity = cosine_similarity(vector)
+
+44 : similarity
+
+45 : new[new['title'] == 'The Lego Movie'].index[0]
+
+46 : def recommend(movie):
+         index = new[new['title'] == movie].index[0]
+         distances = sorted(list(enumerate(similarity[index])),reverse=True, key= lambda x: x[1])
+         for i in distances[1:5]:
+             print(new.iloc[i[0]].title)
+			 
+47 : recommend('Batman')
+
+48 : import pickle
+
+49 : pickle.dump(new,open('movie_list.pkl','wb'))
+     pickle.dump(similarity,open('similarity.pkl','wb'))
